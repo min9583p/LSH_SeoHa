@@ -48,4 +48,4 @@ async def 주의(ctx, user: discord.User, text):
     channel = bot.get_channel(1004748420898103326)
     await channel.send(f'{user.mention}({user.id}) 경고 1회 지급되었습니다.\n사유 : {text}')
 
-bot.run('OTg2MjkwODk4ODg5NDkwNTIy.G-KYG2.2aL57gTttzgZ2UJbtZMfoW1xJZ1vay9tv_MWj8')
+bot.run('OTg2MjkwODk4ODg5NDkwNTIy.GRfRpF.XEPfLuNXhOzQiMFG8Ju7hBPxGeniUhQ04mQIEw')
