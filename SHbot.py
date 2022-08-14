@@ -6,6 +6,7 @@ from discord import Member
 from discord.utils import get
 from discord.ext import commands
 import random
+
 client = discord.Client()
 bot = commands.Bot(command_prefix=["서하야 ", "a", "ㅅㅎ"])
 
@@ -67,7 +68,7 @@ async def 나라(ctx):
 
 @bot.command()
 async def 에그(ctx):
-    rmm = ["계란후라이다!", "이 서버의 개설자 님이세요!", "계란찜..?", "계란빵 먹고싶당..", "에그타르트!", "언제나 싼가격의 계란과자!", "원무과장 에그스크램블!", "계란말이 계란말이 계란말이Yo!", "눔하님의 애착인형","계란국"]
+    rmm = ["계란후라이다!", "이 서버의 개설자 님이세요!", "계란찜..?", "계란빵 먹고싶당..", "에그타르트!", "언제나 싼가격의 계란과자!", "원무과장 에그스크램블!", "계란말이 계란말이 계란말이Yo!", "눔하님의 애착인형", "계란국", "우리 서버의 비선실세라고...?"]
     rm = random.choice(rmm)
     await ctx.send(rm)
 
@@ -100,6 +101,12 @@ async def 연희(ctx):
     await ctx.send(rm)
 
 @bot.command()
+async def 하늘(ctx):
+    rmm = ["정신과장 하늘님!", "이 서버의 개설자에요!", "요즘은 현생을 사시느라 잘 안보여요..ㅠㅠ", "엄청난 서버의 전 총괄로 알고있어요!", "차분한 성격의 소유자!", "본인은 목소리가 안좋다고 하시지만,,,", "허스키한 목소리의 주인이시죠", "우리 서버의 비선실세라고...?"]
+    rm = random.choice(rmm)
+    await ctx.send(rm)
+
+@bot.command()
 async def 서하(ctx):
     rmm = ["제 주인님이요?", "이 서버의 개설자에요!", "아 그 에그님만 놀리는 사람?", "'무드등~의 창시자로 알고있어요'", "집착광공!", "에그님의 전담 카운터", "제게 다양한 지식을 알려주신 분이에요!", "저를 부르신건가요? 아님..?", "이서하님이 만드신 지정 답변 봇 서하에요!", "저는 사실 서하님이 심심해서 만들어졌답니다!", "제 원래 목적은 서하님의 말동무에요!", "에그가 찜함", f"저는 {ctx.message.author.mention}님의 충실한 봇 서하봇이에요!"]
     rm = random.choice(rmm)
@@ -110,11 +117,12 @@ async def 도움(ctx):
     embed = discord.Embed(title = "서하봇", description = "1세대 봇", color = 0x6E17E3) 
     embed.add_field(name = "❓도움", value = "도움말을 봅니다", inline = False)
     embed.add_field(name = "🎲주사위", value = "주사위를 굴려 봇과 대결합니다", inline = False)
-    embed.add_field(name = "🪪회원가입", value = "각종 컨텐츠를 즐기기 위한 회원가입을 합니다", inline = False)
     embed.add_field(name = "📋내정보", value = "자신의 정보를 확인합니다", inline = False)
     embed.add_field(name = "🔎정보 [대상]", value = "멘션한 [대상]의 정보를 확인합니다", inline = False)
     embed.add_field(name = "📨송금 [대상] [돈]", value = "멘션한 [대상]에게 [돈]을 보냅니다", inline = False)
     embed.add_field(name = "🎰도박 [돈]", value = "[돈]을 걸어 도박을 합니다. 올인도 가능합니다", inline = False)
+    embed.add_field(name = "🧧용돈", value = "랜덤으로 용돈을 지급한다", inline = False)
+    embed.add_field(name = "💳환전 [미무포인트]", value = "미무포인트로 환전한다. ex)서하야 환전 10000 | 10만원 = 1만 포인트", inline = False)
     await ctx.send(embed=embed)
 
 @bot.command()
@@ -123,11 +131,12 @@ async def 고급(ctx):
     embed = discord.Embed(title = "서하봇", description = "1세대 봇", color = 0x6E17E3) 
     embed.add_field(name = "❓도움", value = "도움말을 봅니다", inline = False)
     embed.add_field(name = "🎲주사위", value = "주사위를 굴려 봇과 대결합니다", inline = False)
-    embed.add_field(name = "🪪회원가입", value = "각종 컨텐츠를 즐기기 위한 회원가입을 합니다", inline = False)
     embed.add_field(name = "📋내정보", value = "자신의 정보를 확인합니다", inline = False)
     embed.add_field(name = "🔎정보 [대상]", value = "멘션한 [대상]의 정보를 확인합니다", inline = False)
     embed.add_field(name = "📨송금 [대상] [돈]", value = "멘션한 [대상]에게 [돈]을 보냅니다", inline = False)
     embed.add_field(name = "🎰도박 [돈]", value = "[돈]을 걸어 도박을 합니다. 올인도 가능합니다", inline = False)
+    embed.add_field(name = "🧧용돈", value = "랜덤으로 용돈을 지급한다(쿨타임 1시간)", inline = False)
+    embed.add_field(name = "💳환전 [미무포인트]", value = "미무포인트로 환전한다. ex)서하야 환전 10000 | 10만원 = 1만 포인트", inline = False)
     embed.add_field(name = "========================", value = "관리자 전용 커맨드", inline = False)
     embed.add_field(name = "🧧지급 [대상] [돈]", value = "멘션한 [대상]에게 [돈]을 지급합니다", inline = False)
     embed.add_field(name = "✨경험치 [대상] [경험치]", value = "멘션한 [대상]에게 [경험치]을 지급합니다", inline = False)
@@ -135,6 +144,29 @@ async def 고급(ctx):
     embed.add_field(name = "💸차감 [대상] [돈]", value = "멘션한 [대상]에게서 [돈]을 차감합니다", inline = False)
     embed.set_footer(text="주인장")
     channel = bot.get_channel(997116215942193244)
+    await channel.send(embed=embed)
+
+@bot.command()
+@commands.has_any_role(1004689605305585704, 998046067964776578, 1004771045091323944)
+async def 특수(ctx):
+    embed = discord.Embed(title = "서하봇", description = "1세대 봇", color = 0x6E17E3) 
+    embed.add_field(name = "❓도움", value = "도움말을 봅니다", inline = False)
+    embed.add_field(name = "🎲주사위", value = "주사위를 굴려 봇과 대결합니다", inline = False)
+    embed.add_field(name = "📋내정보", value = "자신의 정보를 확인합니다", inline = False)
+    embed.add_field(name = "🔎정보 [대상]", value = "멘션한 [대상]의 정보를 확인합니다", inline = False)
+    embed.add_field(name = "📨송금 [대상] [돈]", value = "멘션한 [대상]에게 [돈]을 보냅니다", inline = False)
+    embed.add_field(name = "🎰도박 [돈]", value = "[돈]을 걸어 도박을 합니다. 올인도 가능합니다", inline = False)
+    embed.add_field(name = "🧧용돈", value = "랜덤으로 용돈을 지급한다(쿨타임 1시간)", inline = False)
+    embed.add_field(name = "💳환전 [미무포인트]", value = "미무포인트로 환전한다. ex)서하야 환전 10000 | 10만원 = 1만 포인트", inline = False)
+    embed.add_field(name = "========================", value = "특수 커맨드", inline = False)
+    embed.add_field(name = "📢a [대상]", value = "원무과 전용 | 병동에 [대상]을 멘션하여 환영멘트를 보냅니다", inline = False)
+    embed.add_field(name = "📣x", value = "원무과 전용 | 안내중 문제 발생시 보안팀 호출", inline = False)
+    embed.add_field(name = "📢b [대상]", value = "간호사 전용 | 병동에 [대상]을 멘션하여 환영멘트를 보냅니다", inline = False)
+    embed.add_field(name = "⚠️c [대상] [번호]", value = "보안팀 전용 | [대상]에게 [번호]에 맞는 사유의 주의를 줍니다", inline = False)
+    embed.add_field(name = "🚫w [대상] [번호]", value = "보안팀 전용 | [대상]에게 [번호]에 맞는 사유의 경고를 줍니다", inline = False)
+    embed.add_field(name = "📣t", value = "정신과 전용 | 상담중 문제 발생시 보안팀 호출", inline = False)
+    embed.set_footer(text="주인장")
+    channel = bot.get_channel(1005089714266701925)
     await channel.send(embed=embed)
 
 @bot.command()
@@ -175,9 +207,11 @@ async def 도박(ctx, money):
                 modifyMoney(ctx.author.name, userRow, -int(betting))
                 addLoss(ctx.author.name, userRow, int(betting))
 
-            embed = discord.Embed(title = "🎰도박 결과", description = result, color = _color)
+            embed = discord.Embed(title = "🎰도박 결과🎰", description = result, color = _color)
             embed.add_field(name = "🪙배팅금액", value = betting, inline = False)
             embed.add_field(name = "💰현재 자산", value = getMoney(ctx.author.name, userRow), inline = False)
+            embed.add_field(name = "도박은 질병입니다.", value = ctx.author.mention, inline = False)
+            embed.set_footer(text="도박상담 1336")
 
             await ctx.send(embed=embed)
             
@@ -202,9 +236,11 @@ async def 도박(ctx, money):
                     modifyMoney(ctx.author.name, userRow, -int(betting))
                     addLoss(ctx.author.name, userRow, int(betting))
 
-                embed = discord.Embed(title = "🎰도박 결과", description = result, color = _color)
+                embed = discord.Embed(title = "🎰도박 결과🎰", description = result, color = _color)
                 embed.add_field(name = "🪙배팅금액", value = betting, inline = False)
                 embed.add_field(name = "💰현재 자산", value = getMoney(ctx.author.name, userRow), inline = False)
+                embed.add_field(name = "도박은 질병입니다.", value = ctx.author.mention, inline = False)
+                embed.set_footer(text="도박상담 1336")
 
                 await ctx.send(embed=embed)
 
@@ -235,13 +271,13 @@ async def 랭킹(ctx):
     await ctx.send(embed=embed) 
 
 @bot.command()
-async def 회원가입(ctx):
+async def 번호표(ctx):
     print("회원가입이 가능한지 확인합니다.")
     userExistance, userRow = checkUser(ctx.author.name, ctx.author.id)
     if userExistance:
         print("DB에서 ", ctx.author.name, "을 찾았습니다.")
         print("------------------------------\n")
-        await ctx.send("이미 가입하셨습니다.")
+        await ctx.send("이미 발급하셨습니다.")
     else:
         print("DB에서 ", ctx.author.name, "을 찾을 수 없습니다")
         print("")
@@ -250,7 +286,7 @@ async def 회원가입(ctx):
 
         print("회원가입이 완료되었습니다.")
         print("------------------------------\n")
-        await ctx.send("회원가입이 완료되었습니다.")
+        await ctx.send(f'번호표가 발급되었습니다.\n\n<@&1004688586093887528>\n{ctx.author.name}님의 안내를 도와주세요')
 
 @bot.command()
 async def 탈퇴(ctx):
@@ -283,10 +319,10 @@ async def 내정보(ctx):
         expToUP = level*level + 6*level
         boxes = int(exp/expToUP*20)
         print("------------------------------\n")
-        embed = discord.Embed(title="📋유저 정보", description = ctx.author.discriminator, color = 0x62D0F6)
+        embed = discord.Embed(title="📋유저 정보", description = ctx.author.name, color = 0x62D0F6)
         embed.add_field(name = "🎟️레벨", value = level)
         embed.add_field(name = "🏆순위", value = str(rank) + "/" + str(userNum))
-        embed.add_field(name = "✨XP: " + str(exp) + "/" + str(expToUP), value = boxes * "```:blue_square:```" + (20-boxes) * ":white_large_square:", inline = False)
+        embed.add_field(name = "✨XP: " + str(exp) + "/" + str(expToUP), value = boxes * ":blue_square:" + (20-boxes) * ":white_large_square:", inline = False)
         embed.add_field(name = "💰보유 자산", value = money, inline = False)
         embed.add_field(name = "💸도박으로 날린 돈", value = loss, inline = False)
 
@@ -299,13 +335,13 @@ async def 정보(ctx, user: discord.User):
     if not userExistance:
         print("DB에서 ", user.name, "을 찾을 수 없습니다")
         print("------------------------------\n")
-        await ctx.send(user.discriminator  + " 은(는) 등록되지 않은 사용자입니다.")
+        await ctx.send(user.name  + " 은(는) 등록되지 않은 사용자입니다.")
     else:
         level, exp, money, loss = userInfo(userRow)
         rank = getRank(userRow)
         userNum = checkUserNum()
         print("------------------------------\n")
-        embed = discord.Embed(title="🔎유저 정보", description = user.discriminator, color = 0x62D0F6)
+        embed = discord.Embed(title="🔎유저 정보", description = user.name, color = 0x62D0F6)
         embed.add_field(name = "🎟️레벨", value = level)
         embed.add_field(name = "✨경험치", value = str(exp) + "/" + str(level*level + 6*level))
         embed.add_field(name = "🏆순위", value = str(rank) + "/" + str(userNum))
@@ -365,10 +401,25 @@ async def reset(ctx):
     resetData()
 
 @bot.command()
+async def 환전(ctx, text):
+    channel = bot.get_channel(1008380068915060767)
+    await channel.send(f"<@&998046067964776578>\n\n{ctx.author.mention}님이 {text}만큼의 환전을 요청하셨습니다!")
+
+@bot.command()
+@commands.cooldown(1, 3600, commands.BucketType.user)
+async def 용돈(ctx):
+    channel = bot.get_channel(1006571303211372544)
+    rmm = [10, 100, 500, 1000, 50, 500, 5000, 2000, 2500, 300, 1500, 10000, 100000, 10, 100, 500, 1000, 50, 500, 5000, 2000, 2500, 300, 1500, 10, 100, 500, 1000, 50, 500, 5000, 2000, 2500, 300, 1500, 10, 100, 500, 1000, 50, 500, 10, 100, 500, 1000, 50, 500]
+    rm = random.choice(rmm)
+    await channel.send(f'{ctx.author.mention}님에게 성공적으로 {rm}원을 지급하였습니다.\n\n다음 사용 가능시간까지 1시간 남았습니다.\n쿨타임 이전에는 해당 명령어에 반응하지 않습니다.')
+    user, row = checkUser(ctx.author.name, ctx.author.id)
+    addMoney(row, int(rm))
+    print("MONEY add Success")
+
+@bot.command()
 @commands.has_any_role(1004689605305585704, 998046067964776578)
 async def 지급(ctx, user: discord.User, money):
-    channel = bot.get_channel(1006571303211372544)
-    await channel.send(user.mention + '님에게 성공적으로 ' + money + '원을 지급하였습니다.')
+    await ctx.send(user.mention + '님에게 성공적으로 ' + money + '원을 지급하였습니다.')
     user, row = checkUser(user.name, user.id)
     addMoney(row, int(money))
     print("MONEY add Success")
@@ -376,8 +427,7 @@ async def 지급(ctx, user: discord.User, money):
 @bot.command()
 @commands.has_any_role(1004689605305585704, 998046067964776578)
 async def 경험치(ctx, user: discord.User, exp):
-    channel = bot.get_channel(1006571303211372544)
-    await channel.send(user.mention + '님에게 성공적으로 ' + exp + '경험치를 지급하였습니다.')
+    await ctx.send(user.mention + '님에게 성공적으로 ' + exp + '경험치를 지급하였습니다.')
     user, row = checkUser(user.name, user.id)
     addExp(row, int(exp))
     print("EXP add Success")
@@ -385,8 +435,7 @@ async def 경험치(ctx, user: discord.User, exp):
 @bot.command()
 @commands.has_any_role(1004689605305585704, 998046067964776578)
 async def 레벨(ctx, user: discord.User, lvl):
-    channel = bot.get_channel(1006571303211372544)
-    await channel.send(user.mention + '님에게 성공적으로 ' + lvl + '레벨을 지급하였습니다.')
+    await ctx.send(user.mention + '님에게 성공적으로 ' + lvl + '레벨을 지급하였습니다.')
     user, row = checkUser(user.name, user.id)
     adjustlvl(row, int(lvl))
     print("LEVEL add Success")
@@ -394,8 +443,7 @@ async def 레벨(ctx, user: discord.User, lvl):
 @bot.command()
 @commands.has_any_role(1004689605305585704, 998046067964776578)
 async def 차감(ctx, user: discord.User, money):
-    channel = bot.get_channel(1006571303211372544)
-    await channel.send(f'{user.mention}님의 자산을 성공적으로 {money}원 차감하였습니다.')
+    await ctx.send(f'{user.mention}님의 자산을 성공적으로 {money}원 차감하였습니다.')
     user, row = checkUser(user.name, user.id)
     modifyMoney(user, row, -int(money))
     print("MONEY min Success")
@@ -410,17 +458,18 @@ async def on_message(message):
         return
     else:
         userExistance, userRow = checkUser(message.author.name, message.author.id)
-        channel = bot.get_channel(1006571303211372544)
+        channel = bot.get_channel(1005349277947670528)
         if userExistance:
             levelUp, lvl = levelupCheck(userRow)
             if levelUp:
                 print(message.author, "가 레벨업 했습니다")
                 print("")
-                embed = discord.Embed(title = "레벨업", description = "", color = 0x00A260)
-                embed.set_footer(text = message.author.name + " 님이 " + str(lvl) + "레벨 달성!🎉")
+                embed = discord.Embed(title = "🧪약물치료🧪", description = "", color = 0x00A260)
+                embed.set_footer(text = message.author.name + " 님이 약물치료 " + str(lvl) + "회를 받으셨습니다")
                 await channel.send(embed=embed)
             else:
                 modifyExp(userRow, 1)
+                addMoney(userRow, int(10))
                 print("------------------------------\n")
 
         await bot.process_commands(message)
@@ -437,6 +486,12 @@ async def a(ctx, user: discord.User):
     await channel.send(f'<@&1005458692470222900>\n᛭저희 병원에 새로오신 환자분을 환영해주세요! :tada:\n\n {user.mention}님! 저희 서버에 오신걸 환영해요!\n\n᛭서버 적응이 어려우시다면 간호사를 불러주세요! :person_raising_hand:\n\n᛭문의 하실게있으시다면 <#1005166621914058782>에 편하게 문의해주세요!  :envelope_with_arrow:\n\n᛭공지는 <#1005092490061291580>에서 확인해주세요! :loudspeaker:')
 
 @bot.command()
+@commands.has_any_role(1004688954089537667, 1004688539914608640, 1004689605305585704, 998046067964776578)
+async def b(ctx, user: discord.User):
+    channel = bot.get_channel(1004742567759466536)
+    await channel.send(f'------৹⟦ {user.mention}님 어서오세요! ⟧৹------\n\n🌹 ⟦저희 세한 병원에 오신것을 진심으로 환영합니다!⟧\n\n🌹 ⟦저는 {user.mention}님의 담당 간호사 {ctx.author.mention}입니다!⟧\n\n🌹 ⟦세한 병원에서의 적응이 어려우시다면 <@&1004688954089537667> 혹은 저를 멘션해주세요!⟧\n\n🌹 ⟦남들에게 말 못할 고민이나 서버내에서의 고민이 있으시다면 <@&1004688920694501406>에서 상담을 도와드려요!⟧\n\n🌹 ⟦편안한 병원 생활 되시길 바랍니다!⟧ ')
+
+@bot.command()
 @commands.has_any_role(1004688567613784175, 1004688539914608640, 1004689605305585704, 998046067964776578)
 async def w(ctx, user: discord.User, text):
     channel = bot.get_channel(1004748420898103326)
@@ -447,5 +502,27 @@ async def w(ctx, user: discord.User, text):
 async def c(ctx, user: discord.User, text):
     channel = bot.get_channel(1004748420898103326)
     await channel.send(f'{user.mention}||({user.id})|| 주의 1회 지급되었습니다.\n사유 : <#1005092364118925383> {text} 을 참고해주세요!')
+
+@bot.command()
+@commands.has_any_role(1004688586093887528, 1004688539914608640, 1004689605305585704, 998046067964776578)
+async def x(ctx):
+    channel = bot.get_channel(1005089714266701925)
+
+    embed = discord.Embed(title="⚠️코드블루⚠️", description = "📢<@&1004688586093887528>에서 알립니다.\n\n안내 중 문제가 발생 하였으니 보안팀은 신속히 출동 부탁드립니다.", color = 0x24008D)
+    embed.add_field(name = "호출" ,value = "<@&1004688567613784175> <@&1004688539914608640> <@&998046067964776578> <@&1004689605305585704>")
+
+    await channel.send(embed=embed)
+    await channel.send('<@&1004688567613784175> <@&1004688539914608640> <@&998046067964776578> <@&1004689605305585704>')
+
+@bot.command()
+@commands.has_any_role(1004688920694501406, 1004688539914608640, 1004689605305585704, 998046067964776578)
+async def t(ctx):
+    channel = bot.get_channel(1005089714266701925)
+
+    embed = discord.Embed(title="⚠️코드레드⚠️", description = "📢<@&1004688920694501406>에서 알립니다.\n\n상담 중 문제가 발생 하였으니 보안팀은 신속히 출동 부탁드립니다.", color = 0xA70800)
+    embed.add_field(name = "호출" ,value = "<@&1004688567613784175> <@&1004688539914608640> <@&998046067964776578> <@&1004689605305585704>")
+
+    await channel.send(embed=embed)
+    await channel.send('<@&1004688567613784175> <@&1004688539914608640> <@&998046067964776578> <@&1004689605305585704>')
 
 bot.run('OTg2MjkwODk4ODg5NDkwNTIy.GRfRpF.XEPfLuNXhOzQiMFG8Ju7hBPxGeniUhQ04mQIEw')
