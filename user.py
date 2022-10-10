@@ -1,4 +1,4 @@
-from openpyxl import load_workbook, Workbook
+from openpyxl import *
 
 c_name = 1
 c_id = 2
@@ -27,7 +27,7 @@ def checkUserNum():
     count = 0
 
     for row in range(2, ws.max_row+1):
-        if ws.cell(row,c_name).value != None:
+        if ws.cell(row,c_id).value != None:
             count = count+1
         else:
             count = count
