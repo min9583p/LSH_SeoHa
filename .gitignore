@@ -1,10 +1,16 @@
 #custom file ignorance
-userDB.xlsx
-*.xlsx
 Develop/
-BackUp/
 Legacy/
 config/
+ffmpeg/
+test/
+.vscode/
+*.xlsx
+*.mp3
+voice.py
+BackUp.py
+BackUp/*
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

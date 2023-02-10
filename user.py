@@ -6,6 +6,8 @@ c_lvl = 3
 c_exp = 4
 c_money = 5
 c_loss = 6
+c_warn = 7
+c_caut = 8
 
 default_money = 10000
 
@@ -73,7 +75,7 @@ def checkUser(_name, _id):
         print("고유번호정보와 일치 여부: ", ws.cell(row, c_id).value == hex(_id))
         print("")
 
-        if ws.cell(row, c_name).value == _name and ws.cell(row,c_id).value == hex(_id):
+        if ws.cell(row,c_id).value == hex(_id):
             print("등록된  이름과 고유번호를 발견")
             print("등록된  값의 위치: ",  row, "번째 줄")
             print("")
@@ -230,6 +232,36 @@ def getRank(_row):
 
     return result
 
+#=========================Warn & Caut==================================
+
+def modifyWarn(_target, _row, _amount):
+    print("user.py - modifyWarn")
+    loadFile()
+
+    print(_target, "의 경고데이터 수정")
+    print(_target, "의 경고: " + str(ws.cell(_row, c_warn).value))
+    print("추가할 경고: ", _amount)
+    ws.cell(_row, c_warn).value += _amount
+
+    print("경고데이터 수정 완료")
+    print("수정된", _target, "의 경고: ", ws.cell(_row, c_warn).value)
+    
+    saveFile()
+
+def modifyCaut(_target, _row, _amount):
+    print("user.py - modifyCaut")
+    loadFile()
+
+    print(_target, "의 주의데이터 수정")
+    print(_target, "의 주의: " + str(ws.cell(_row, c_caut).value))
+    print("추가할 주의: ", _amount)
+    ws.cell(_row, c_caut).value += _amount
+
+    print("주의데이터 수정 완료")
+    print("수정된", _target, "의 주의: ", ws.cell(_row, c_caut).value)
+    
+    saveFile()
+
 #=========================Account==================================
 def Signup(_name, _id):
     print("user.py - signup")
@@ -257,6 +289,11 @@ def Signup(_name, _id):
     ws.cell(row=_row, column=c_loss, value = 0)
     print("초기 손실 설정 | loss:", ws.cell(_row,c_loss).value)
 
+    ws.cell(row=_row, column=c_warn, value = 0)
+    print("초기 경고 설정 | loss:", ws.cell(_row,c_warn).value)
+    ws.cell(row=_row, column=c_caut, value = 0)
+    print("초기 경고 설정 | loss:", ws.cell(_row,c_caut).value)
+
     print("")
 
     saveFile()
@@ -282,15 +319,19 @@ def userInfo(_row):
     _exp = ws.cell(_row,c_exp).value
     _money = ws.cell(_row,c_money).value
     _loss = ws.cell(_row,c_loss).value
+    _warn = ws.cell(_row,c_warn).value
+    _caut = ws.cell(_row,c_caut).value
 
     print("레벨: ", _lvl)
     print("경험치: ", _exp)
     print("보유자산: ", _money)
     print("잃은 돈: ", _loss)
+    print("경고 횟수: ", _warn)
+    print("주의 횟수: ", _caut)
 
     saveFile()
 
-    return _lvl, _exp, _money, _loss
+    return _lvl, _exp, _money, _loss, _warn, _caut
 
 
 #=========================For Test==================================
@@ -323,5 +364,19 @@ def adjustlvl(_row, _amount):
     
     ws.cell(_row, c_lvl).value = _amount
     ws.cell(_row, c_exp).value = 0
+
+    saveFile
+
+def addWarn(_row, _amount):
+    loadFile()
+    
+    ws.cell(_row, c_warn).value += _amount
+
+    saveFile
+
+def addCaut(_row, _amount):
+    loadFile()
+    
+    ws.cell(_row, c_caut).value += _amount
 
     saveFile

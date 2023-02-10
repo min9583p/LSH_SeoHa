@@ -1,14 +1,17 @@
 #main.py
 import asyncio, discord, os, time, BackUp, threading, shutil
-from typing_extensions import Required
 from discord import Member
+from discord import *
 from discord.utils import get
-from discord.ext import commands, bridge
+from discord.ext import commands, bridge, tasks, pages
 from discord.commands import *
+from gtts import gTTS
+from io import BytesIO
 import numpy as np
 import random
 import zlib
 import sys
+import pyttsx3
 from dotenv import load_dotenv
 from datetime import date
 from datetime import datetime
@@ -17,6 +20,14 @@ from game import *
 from user import *
 
 boot_start = datetime.today()
+
+rng = np.random.default_rng()
+
+engine = pyttsx3.init()
+voices = engine.getProperty('voices')
+engine.setProperty('rate', 185)
+engine.setProperty('volume', 1.0)
+engine.setProperty("voice", voices[0].id)
 
 intents = discord.Intents()
 intents.message_content = True
@@ -30,8 +41,7 @@ date_format = time.strftime("%Y-%m-%d_%H시%M분%S초")
 date_form = time.strftime("%Y. %m. %d.")
 dst_name=date_format+'_UserDB_BackUp'
 dstpy_name=date_format+'_SHbot_BackUp'
-
-admin = SlashCommandGroup("admin", "Only Admin Commands")
+cmd_channel = bot.get_channel(1008004079743672432)
 
 def ATBU():
     shutil.copy(os.getenv('DB_PT'), f'./BackUp/{dst_name}.xlsx')
@@ -43,6 +53,7 @@ ATBU()
 async def on_ready():
     boot_end = datetime.today()
     boot_time = boot_end - boot_start
+    dm = bot.get_user(648050563061121036)
     channel = bot.get_channel(1008004079743672432)
     embed = discord.Embed(title="🚧 서하 기상 🚧", description = " " ,color = 0xFFC300)
     embed.add_field(name = "기상 시간", value = date_format, inline = False)
@@ -51,7 +62,9 @@ async def on_ready():
     await channel.send(embed=embed)
 
     print("We have loggedd in as {0.user}".format(bot))
-        
+
+################<기본 커맨드>################
+
 @bot.slash_command(name="핑", description = '간단한 핑체크!')
 async def 핑(ctx):
     await ctx.respond(f"퐁! {round(bot.latency * 1000)}ms")
@@ -62,21 +75,10 @@ async def 안녕(ctx, name: str = None):
     name = name or ctx.author.name
     RM = await ctx.respond(f"안녕 {name}!")
     time.sleep(1.5)
-    await RM.edit_original_message(content = "헤헷..")
+    await RM.edit_original_response(content = "헤헷..")
 
-@bot.slash_command(name = '도움말', description = '말그대로')
-async def 도움(ctx):
-    embed = discord.Embed(title = "서하봇", description = "V2", color = 0x6E17E3) 
-    embed.add_field(name = "❓도움", value = "도움말을 봅니다", inline = False)
-    embed.add_field(name = "🎲주사위", value = "주사위를 굴려 봇과 대결합니다", inline = False)
-    embed.add_field(name = "📋내정보", value = "자신의 정보를 확인합니다", inline = False)
-    embed.add_field(name = "🔎정보 [대상]", value = "멘션한 [대상]의 정보를 확인합니다", inline = False)
-    embed.add_field(name = "📨송금 [대상] [돈]", value = "멘션한 [대상]에게 [돈]을 보냅니다", inline = False)
-    embed.add_field(name = "🎰도박 [돈]", value = "[돈]을 걸어 도박을 합니다. 올인도 가능합니다", inline = False)
-    embed.add_field(name = "🧧용돈", value = "랜덤으로 용돈을 지급한다", inline = False)
-    embed.add_field(name = "💳환전 [미무포인트]", value = "미무포인트로 환전한다. ex)서하야 환전 10000 | 10만원 = 1만 포인트", inline = False)
-    await ctx.respond(embed=embed)
-    
+################<미니게임>################
+
 @bot.slash_command(name = '주사위', description = '주사위를 굴릴수 있다!')
 @commands.has_any_role(1004771045091323944, 1004685377682026516)
 async def 주사위(ctx):
@@ -168,19 +170,245 @@ async def 도박(ctx,
 
     print("------------------------------\n")
 
-@bot.slash_command(name = '랭킹', description = '누가누가 레벨이 높을까?')
+################<기능 커맨드>################
+
+@bot.slash_command(name="접속", description = '음성채널에 서하봇을 초대하자!')
+@commands.cooldown(1, 15, commands.BucketType.user)
 @commands.has_any_role(1004771045091323944, 1004685377682026516)
-async def 랭킹(ctx):
-    rank = ranking()
-    embed = discord.Embed(title = "🏆레벨 랭킹", description = "", color = 0x4A44FF)
+async def 접속(ctx):
+    voice = ctx.author.voice
+    vc = get(bot.voice_clients, guild=ctx.guild)
+    if not vc:
+        if not voice:
+            await ctx.respond(f"❎ {ctx.author.mention}, 음성 채널에 접속 한 후에 명령어를 사용해줘!", ephemeral =True)
+        else:
+            await voice.channel.connect()
+            await ctx.respond(f"✅ {ctx.author.mention}, 어머! 나를 초대해준거야? 고마워!!!", ephemeral =True)
+    else:
+        await ctx.respond(f"❎ {ctx.author.mention}, 이미 채널에 들어가 있는걸?", ephemeral =True)
 
-    for i in range(0,len(rank)):
-        if i%2 == 0:
-            name = rank[i]
-            lvl = rank[i+1]
-            embed.add_field(name = str(int(i/2+1))+"위 "+name, value ="🎟️레벨: "+str(lvl), inline=False)
+@bot.slash_command(name="전달", description = '어떤 말을 대신 전해줄까?')
+@commands.cooldown(1, 10, commands.BucketType.user)
+@commands.has_any_role(1004771045091323944, 1004685377682026516)
+async def 전달(ctx, *, 내용):
+    engine.save_to_file(f"{str(내용)}", "text.mp3")
+    engine.runAndWait()
+    vc = get(bot.voice_clients, guild=ctx.guild)
+    voice = ctx.author.voice
+    if not vc:
+        if not voice:
+            await ctx.respond(f"❎ {ctx.author.mention}, 음성 채널에 접속 한 후에 명령어를 사용해줘!", ephemeral =True)
+        else:
+            await ctx.respond(f"❎ {ctx.author.mention}, '/접속'을 통해 나를 먼저 초대해줘!", ephemeral =True)
+    else:
+        vc = get(bot.voice_clients, guild=ctx.guild)
+        vc.play(discord.FFmpegPCMAudio(executable='C:\\FFmpeg\\bin\\ffmpeg.exe', source='text.mp3'), after=None)
+        vc.source = discord.PCMVolumeTransformer(vc.source)
+        vc.source.volume = 5
+        await ctx.respond(f'✅ {ctx.author.mention}, 성공적으로 음성을 전달했어!!', ephemeral =True)
+        await ctx.send(f'✅ {ctx.author.mention} | {str(내용)}')
 
-    await ctx.respond(embed=embed) 
+@bot.slash_command(name="퇴장", description = '음성채널에서 서하봇을 내쫒자!')
+@commands.cooldown(1, 15, commands.BucketType.user)
+@commands.has_any_role(1004771045091323944, 1004685377682026516)
+async def 퇴장(ctx):
+    vc = get(bot.voice_clients, guild=ctx.guild)
+    if not vc:
+        await ctx.respond(f"❎ {ctx.author.mention}, 이미 음성채널 밖에 있는걸?", ephemeral =True)
+    else:
+        await ctx.respond(f"✅ {ctx.author.mention}, 히잉.. 날 더 필요로 하지 않는거야? 잘있어.. 난 갈겡 ㅠㅠ", ephemeral =True)
+        await vc.disconnect() 
+
+################<이벤트용 커맨드>################
+
+@bot.slash_command(name = 'xmas', description = '메리 크리스마스! 호호호~')
+@commands.cooldown(1, 600, commands.BucketType.user)
+async def xmas(ctx):
+    if get(ctx.author.roles, id=998046067964776578):
+        if get(ctx.author.roles, id=1042063138209669180):
+            await ctx.respond('모든 역할을 수령하셨습니다. \n\n 다음 이벤트를 기대해주세요!', ephemeral =True)
+        else:
+            if get(ctx.author.roles, id = 1056611157357641779) and get(ctx.author.roles, id = 1056611165054173258) and get(ctx.author.roles, id = 1056611167948247070) and get(ctx.author.roles, id = 1056611170766815355) and get(ctx.author.roles, id=1056611173417627658) and get(ctx.author.roles, id=1056611186872959076) and get(ctx.author.roles, id=1056611192988237874) and get(ctx.author.roles, id=1056611196809265204) and get(ctx.author.roles, id=1056611224789471304):
+                await ctx.respond('허걱! 벌써 모든 역할을 다 뽑으셨다니! \n\n 대단해요! 다음 이벤트에 또 도전해보세요! \n\n 보상으로 <@&1042063138209669180> 역할을 드릴게요!')
+                await ctx.author.add_roles(discord.Object(1042063138209669180))
+            else:
+                embed1 = discord.Embed(title = "🎄𝓜𝓮𝓻𝓻𝔂 𝓒𝓱𝓻𝓲𝓼𝓽𝓶𝓪𝓼🎄", description = None, color = 0x6E17E3) 
+                embed1.add_field(name = "즐거운 뽑기시간!!", value = "뽑는중", inline = False)
+                embed1.set_footer(icon_url = 'https://i.ytimg.com/vi/5vBlPz023qY/maxresdefault.jpg', text="- 요정 -")
+
+                embed2 = discord.Embed(title = "🎄𝓜𝓮𝓻𝓻𝔂 𝓒𝓱𝓻𝓲𝓼𝓽𝓶𝓪𝓼🎄", description = None, color = 0x6E17E3) 
+                embed2.add_field(name = "즐거운 뽑기시간!!", value = "뽑는중.", inline = False)
+                embed2.set_footer(icon_url = 'https://i.ytimg.com/vi/5vBlPz023qY/maxresdefault.jpg', text="- 요정 -")
+
+                embed3 = discord.Embed(title = "🎄𝓜𝓮𝓻𝓻𝔂 𝓒𝓱𝓻𝓲𝓼𝓽𝓶𝓪𝓼🎄", description = None, color = 0x6E17E3) 
+                embed3.add_field(name = "즐거운 뽑기시간!!", value = "뽑는중..", inline = False)
+                embed3.set_footer(icon_url = 'https://i.ytimg.com/vi/5vBlPz023qY/maxresdefault.jpg', text="- 요정 -")
+
+                embed4 = discord.Embed(title = "🎄𝓜𝓮𝓻𝓻𝔂 𝓒𝓱𝓻𝓲𝓼𝓽𝓶𝓪𝓼🎄", description = None, color = 0x6E17E3) 
+                embed4.add_field(name = "즐거운 뽑기시간!!", value = "뽑는중...", inline = False)
+                embed4.set_footer(icon_url = 'https://i.ytimg.com/vi/5vBlPz023qY/maxresdefault.jpg', text="- 요정 -")
+
+                embed5 = discord.Embed(title = "🎄𝓜𝓮𝓻𝓻𝔂 𝓒𝓱𝓻𝓲𝓼𝓽𝓶𝓪𝓼🎄", description = None, color = 0x6E17E3) 
+                embed5.add_field(name = "결과는 과연?!", value = "두구두구두구두구", inline = False)
+                embed5.set_footer(icon_url = 'https://i.ytimg.com/vi/5vBlPz023qY/maxresdefault.jpg', text="- 요정 -")
+                
+                embed6 = discord.Embed(title = "🎄𝓜𝓮𝓻𝓻𝔂 𝓒𝓱𝓻𝓲𝓼𝓽𝓶𝓪𝓼🎄", description = None, color = 0x6E17E3)
+                embed6.add_field(name = "아쉽지만 다음기회에!!", value = "다음번에 다시 도전해봐!", inline = False)
+                embed6.set_footer(icon_url = 'https://i.ytimg.com/vi/5vBlPz023qY/maxresdefault.jpg', text="- 요정 -")
+
+                embed7 = discord.Embed(title = "🎄𝓜𝓮𝓻𝓻𝔂 𝓒𝓱𝓻𝓲𝓼𝓽𝓶𝓪𝓼🎄", description = None, color = 0x917964) 
+                embed7.add_field(name = "어머? 쿠키라니!!", value = "<@&1056611157357641779>", inline = False)
+                embed7.set_footer(icon_url = 'https://i.ytimg.com/vi/5vBlPz023qY/maxresdefault.jpg', text="- 요정 -")
+                embed7.set_image(url='https://i.ytimg.com/vi/t13TTpUc_Go/maxresdefault.jpg')
+
+                embed8 = discord.Embed(title = "🎄𝓜𝓮𝓻𝓻𝔂 𝓒𝓱𝓻𝓲𝓼𝓽𝓶𝓪𝓼🎄", description = None, color = 0xCC7A02) 
+                embed8.add_field(name = "어머? 루돌프이라니!!", value = "<@&1056611165054173258>", inline = False)
+                embed8.set_footer(icon_url = 'https://i.ytimg.com/vi/5vBlPz023qY/maxresdefault.jpg', text="- 요정 -")
+                embed8.set_image(url='https://www.urbanbrush.net/web/wp-content/uploads/edd/2021/12/urbanbrush-20211213111425086571.jpg')
+
+                embed9 = discord.Embed(title = "🎄𝓜𝓮𝓻𝓻𝔂 𝓒𝓱𝓻𝓲𝓼𝓽𝓶𝓪𝓼🎄", description = None, color = 0x962CA8) 
+                embed9.add_field(name = "어머? 산타라니!!", value = "<@&1056611167948247070>", inline = False)
+                embed9.set_footer(icon_url = 'https://i.ytimg.com/vi/5vBlPz023qY/maxresdefault.jpg', text="- 요정 -")
+                embed9.set_image(url='https://th.bing.com/th/id/R.158dd2c5a7da6024f03b455486fdc5f5?rik=l%2bbJd7rH6kvI1Q&riu=http%3a%2f%2fpostfiles2.naver.net%2f20131121_161%2fsh04022003_1384970374085LapSo_JPEG%2f73293.JPG%3ftype%3dw1&ehk=2smwbw4cEy589YniVHCqb0qepFDCdLxVS9rG0qhA%2baY%3d&risl=&pid=ImgRaw&r=0')
+
+                embed10 = discord.Embed(title = "🎄𝓜𝓮𝓻𝓻𝔂 𝓒𝓱𝓻𝓲𝓼𝓽𝓶𝓪𝓼🎄", description = None, color = 0x9E9A9A) 
+                embed10.add_field(name = "어머? 선물상자라니!!", value = "<@&1056611170766815355>", inline = False)
+                embed10.set_footer(icon_url = 'https://i.ytimg.com/vi/5vBlPz023qY/maxresdefault.jpg', text="- 요정 -")
+                embed10.set_image(url='https://png.pngtree.com/element_our/20190530/ourlarge/pngtree-children-s-day-holiday-gift-box-illustration-image_1246676.jpg')
+
+                embed11 = discord.Embed(title = "🎄𝓜𝓮𝓻𝓻𝔂 𝓒𝓱𝓻𝓲𝓼𝓽𝓶𝓪𝓼🎄", description = None, color = 0x1D9C5D) 
+                embed11.add_field(name = "어머? 트리라니!!", value = "<@&1056611173417627658>", inline = False)
+                embed11.set_footer(icon_url = 'https://i.ytimg.com/vi/5vBlPz023qY/maxresdefault.jpg', text="- 요정 -")
+                embed11.set_image(url='https://littledeep.com/wp-content/uploads/2020/11/christmas-tree-illustration-png-1024x853.png')
+
+                embed12 = discord.Embed(title = "🎄𝓜𝓮𝓻𝓻𝔂 𝓒𝓱𝓻𝓲𝓼𝓽𝓶𝓪𝓼🎄", description = None, color = 0xAA9A9A) 
+                embed12.add_field(name = "어머? 굴뚝이라니!!", value = "<@&1056611186872959076>", inline = False)
+                embed12.set_footer(icon_url = 'https://i.ytimg.com/vi/5vBlPz023qY/maxresdefault.jpg', text="- 요정 -")
+                embed12.set_image(url='https://png.pngtree.com/png-clipart/20190116/ourlarge/pngtree-red-chimney-cartoon-chimney-snow-falling-chimney-hand-drawn-chimney-png-image_401851.jpg')
+
+                embed13 = discord.Embed(title = "🎄𝓜𝓮𝓻𝓻𝔂 𝓒𝓱𝓻𝓲𝓼𝓽𝓶𝓪𝓼🎄", description = None, color = 0xFDF0F0) 
+                embed13.add_field(name = "어머? 촛불이라니!!", value = "<@&1056611192988237874>", inline = False)
+                embed13.set_footer(icon_url = 'https://i.ytimg.com/vi/5vBlPz023qY/maxresdefault.jpg', text="- 요정 -")
+                embed13.set_image(url='https://i.pinimg.com/736x/8d/24/b4/8d24b40b1bb7a010b3bc6ff1c63b9e8b.jpg')
+
+                embed14 = discord.Embed(title = "🎄𝓜𝓮𝓻𝓻𝔂 𝓒𝓱𝓻𝓲𝓼𝓽𝓶𝓪𝓼🎄", description = None, color = 0xB82348) 
+                embed14.add_field(name = "어머? 캐롤이라니!!", value = "<@&1056611196809265204>", inline = False)
+                embed14.set_footer(icon_url = 'https://i.ytimg.com/vi/5vBlPz023qY/maxresdefault.jpg', text="- 요정 -")
+                embed14.set_image(url='https://st2.depositphotos.com/5746754/8501/v/950/depositphotos_85011016-stock-illustration-three-snowman-singing-christmas-carol.jpg')
+
+                embed15 = discord.Embed(title = "🎄𝓜𝓮𝓻𝓻𝔂 𝓒𝓱𝓻𝓲𝓼𝓽𝓶𝓪𝓼🎄", description = None, color = 0xB82348) 
+                embed15.add_field(name = "어머? 샴페인이라니!!", value = "<@&1056611224789471304>", inline = False)
+                embed15.set_footer(icon_url = 'https://i.ytimg.com/vi/5vBlPz023qY/maxresdefault.jpg', text="- 요정 -")
+                embed15.set_image(url='https://media.istockphoto.com/vectors/bottle-of-champagne-and-glass-of-champagne-vector-id501571913?k=6&m=501571913&s=170667a&w=0&h=PRv51nhPXoMwXp0RjhKO4BMQZu7IHFMMfX5DrxtvTxw=')
+
+                embedf = discord.Embed(title = "🎄𝓜𝓮𝓻𝓻𝔂 𝓒𝓱𝓻𝓲𝓼𝓽𝓶𝓪𝓼🎄", description = None, color = 0xCE9178) 
+                embedf.add_field(name = "이미 보유한 역할이야! 다시 도전해봐!", value = "다음번엔 새로운 역할을 뽑을 수 있을거야!", inline = False)
+                embedf.set_footer(text="- 요정 -")
+
+
+                rm = await ctx.respond('뽑기를 시작합니다!!')
+                time.sleep(1)
+                await rm.edit_original_response(embed=embed1)
+                time.sleep(0.25)
+                await rm.edit_original_response(embed=embed2)
+                time.sleep(0.25)
+                await rm.edit_original_response(embed=embed3)
+                time.sleep(0.25)
+                await rm.edit_original_response(embed=embed4)
+                time.sleep(0.25)
+                await rm.edit_original_response(embed=embed1)
+                time.sleep(0.25)
+                await rm.edit_original_response(embed=embed2)
+                time.sleep(0.25)
+                await rm.edit_original_response(embed=embed3)
+                time.sleep(0.25)
+                await rm.edit_original_response(embed=embed4)
+                time.sleep(0.25)
+                await rm.edit_original_response(embed=embed5)
+                time.sleep(0.5)
+                
+                list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]
+                embed = np.random.choice(list, 1, replace=False, p=[0.37, 0.07, 0.07, 0.07, 0.07, 0.07, 0.07, 0.07, 0.07, 0.07])
+
+                if embed == 1: #꽝
+                    await rm.edit_original_response(content = f"허걱!!")
+                    await rm.edit_original_response(embed=embed6)
+                elif embed == 2: #쿠키
+                    if get(ctx.author.roles, id=1056611157357641779):
+                        await rm.edit_original_response(content = f"또 쿠키야?!")
+                        await rm.edit_original_response(embed=embedf)
+                    else:
+                        await rm.edit_original_response(content = f"짜잔!!")
+                        await rm.edit_original_response(embed=embed7)
+                        await ctx.author.add_roles(discord.Object(1056611157357641779))
+                elif embed == 3: #루돌프
+                    if get(ctx.author.roles, id=1056611165054173258):
+                        await rm.edit_original_response(content = f"또 루돌프야?!")
+                        await rm.edit_original_response(embed=embedf)
+                    else:
+                        await rm.edit_original_response(content = f"짜잔!!")
+                        await rm.edit_original_response(embed=embed8)
+                        await ctx.author.add_roles(discord.Object(1056611165054173258))
+                elif embed == 4: #산타
+                    if get(ctx.author.roles, id=1056611167948247070):
+                        await rm.edit_original_response(content = f"또 산타야?")
+                        await rm.edit_original_response(embed=embedf)
+                    else:
+                        await rm.edit_original_response(content = f"짜잔!!")
+                        await rm.edit_original_response(embed=embed9)
+                        await ctx.author.add_roles(discord.Object(1056611167948247070))
+                elif embed == 5: #선물상자
+                    if get(ctx.author.roles, id=1056611170766815355):
+                        await rm.edit_original_response(content = f"또 선물상자야?!")
+                        await rm.edit_original_response(embed=embedf)
+                    else:
+                        await rm.edit_original_response(content = f"짜잔!!")
+                        await rm.edit_original_response(embed=embed10)
+                        await ctx.author.add_roles(discord.Object(1056611170766815355))
+                elif embed == 6: #트리
+                    if get(ctx.author.roles, id=1056611173417627658):
+                        await rm.edit_original_response(content = f"또 트리야?!")
+                        await rm.edit_original_response(embed=embedf)
+                    else:
+                        await rm.edit_original_response(content = f"짜잔!!")
+                        await rm.edit_original_response(embed=embed11)
+                        await ctx.author.add_roles(discord.Object(1056611173417627658))
+                elif embed == 7: #굴뚝
+                    if get(ctx.author.roles, id=1056611186872959076):
+                        await rm.edit_original_response(content = f"또 굴뚝이야?!")
+                        await rm.edit_original_response(embed=embedf)
+                    else:
+                        await rm.edit_original_response(content = f"짜잔!!")
+                        await rm.edit_original_response(embed=embed12)
+                        await ctx.author.add_roles(discord.Object(1056611186872959076))
+                elif embed == 8: #촛불
+                    if get(ctx.author.roles, id=1056611192988237874):
+                        await rm.edit_original_response(content = f"또 촛불이야?!")
+                        await rm.edit_original_response(embed=embedf)
+                    else:
+                        await rm.edit_original_response(content = f"짜잔!!")
+                        await rm.edit_original_response(embed=embed13)
+                        await ctx.author.add_roles(discord.Object(1056611192988237874))
+                elif embed == 9: #캐롤
+                    if get(ctx.author.roles, id=1056611196809265204):
+                        await rm.edit_original_response(content = f"또 캐롤이야?!")
+                        await rm.edit_original_response(embed=embedf)
+                    else:
+                        await rm.edit_original_response(content = f"짜잔!!")
+                        await rm.edit_original_response(embed=embed14)
+                        await ctx.author.add_roles(discord.Object(1056611196809265204))
+                elif embed == 0: #샴페인
+                    if get(ctx.author.roles, id=1056611224789471304):
+                        await rm.edit_original_response(content = f"또 샴페인이야?!")
+                        await rm.edit_original_response(embed=embedf)
+                    else:
+                        await rm.edit_original_response(content = f"짜잔!!")
+                        await rm.edit_original_response(embed=embed15)
+                        await ctx.author.add_roles(discord.Object(1056611224789471304))
+    else:
+        await ctx.respond('해당 이벤트는 종료되었습니다! \n\n 다음 이벤트를 기대해주세요!', ephemeral =True)
+
+################<최초가입>################
 
 @bot.slash_command(name = '번호표', description = '안내를 받고싶다면 번호표를 뽑아봐!')
 @commands.has_any_role(1004739278720483418)
@@ -201,7 +429,7 @@ async def 번호표(ctx,
         await ctx.send(f'번호표가 발급되었습니다.\n\n<@&1004688586093887528>\n{ctx.author.mention}님의 안내를 도와주세요')
     else:
         if 나이 < 12:
-            await ctx.respond('저희 서버는 2022년 기준 11년생 12살 부터 입장 가능합니다.')
+            await ctx.respond('저희 서버는 2023년 기준 11년생 12살 부터 입장 가능합니다.')
         else:
             print("DB에서 ", ctx.author.name, "을 찾을 수 없습니다")
             print("")
@@ -241,6 +469,20 @@ async def 연합번호표(ctx,
         await ctx.respond('성공적으로 번호표가 발급되었습니다. 잠시만 기다려주세요.', ephemeral =True)
         await ctx.send(f'번호표가 발급되었습니다.\n\n<@&1004688586093887528>\n{ctx.author.mention}님의 안내를 도와주세요')
 
+################<정보확인>################
+
+@bot.slash_command(name = '도움말', description = '말그대로')
+async def 도움(ctx):
+    embed = discord.Embed(title = "서하봇", description = "V2", color = 0x6E17E3) 
+    embed.add_field(name = "❓도움", value = "도움말을 봅니다", inline = False)
+    embed.add_field(name = "🎲주사위", value = "주사위를 굴려 봇과 대결합니다", inline = False)
+    embed.add_field(name = "📋내정보", value = "자신의 정보를 확인합니다", inline = False)
+    embed.add_field(name = "🔎정보 [대상]", value = "멘션한 [대상]의 정보를 확인합니다", inline = False)
+    embed.add_field(name = "📨송금 [대상] [돈]", value = "멘션한 [대상]에게 [돈]을 보냅니다", inline = False)
+    embed.add_field(name = "🎰도박 [돈]", value = "[돈]을 걸어 도박을 합니다. 올인도 가능합니다", inline = False)
+    embed.add_field(name = "🧧용돈", value = "랜덤으로 용돈을 지급한다", inline = False)
+    embed.add_field(name = "💳환전 [미무포인트]", value = "미무포인트로 환전한다. ex)서하야 환전 10000 | 10만원 = 1만 포인트", inline = False)
+    await ctx.respond(embed=embed)
 
 @bot.slash_command(name = '내정보', description = '나의 정보를 확인 할 수 있어!')
 @commands.has_any_role(1004771045091323944, 1004685377682026516)
@@ -252,18 +494,21 @@ async def 내정보(ctx):
         print("------------------------------\n")
         await ctx.respond("회원가입 후 자신의 정보를 확인할 수 있습니다.")
     else:
-        level, exp, money, loss = userInfo(userRow)
+        level, exp, money, loss, warn, caut = userInfo(userRow)
         rank = getRank(userRow)
         userNum = checkUserNum()
         expToUP = level*level + 6*level
         boxes = int(exp/expToUP*20)
         print("------------------------------\n")
-        embed = discord.Embed(title="📋유저 정보", description = ctx.author.name, color = 0x62D0F6)
+        embed = discord.Embed(title="📋유저 정보", description = ctx.author.mention, color = 0x62D0F6)
         embed.add_field(name = "🎟️레벨", value = level)
         embed.add_field(name = "🏆순위", value = str(rank) + "/" + str(userNum))
         embed.add_field(name = "✨XP: " + str(exp) + "/" + str(expToUP), value = boxes * ":blue_square:" + (20-boxes) * ":white_large_square:", inline = False)
         embed.add_field(name = "💰보유 자산", value = money, inline = False)
         embed.add_field(name = "💸도박으로 날린 돈", value = loss, inline = False)
+        embed.add_field(name = "🚫경고 횟수", value = warn)
+        embed.add_field(name = "💢주의 횟수", value = caut)
+        
 
         await ctx.respond(embed=embed)
 
@@ -281,7 +526,7 @@ async def 정보(ctx,
         rank = getRank(userRow)
         userNum = checkUserNum()
         print("------------------------------\n")
-        embed = discord.Embed(title="🔎유저 정보", description = 환자.name, color = 0x62D0F6)
+        embed = discord.Embed(title="🔎유저 정보", description = 환자.mention, color = 0x62D0F6)
         embed.add_field(name = "🎟️레벨", value = level)
         embed.add_field(name = "✨경험치", value = str(exp) + "/" + str(level*level + 6*level))
         embed.add_field(name = "🏆순위", value = str(rank) + "/" + str(userNum))
@@ -289,6 +534,22 @@ async def 정보(ctx,
         embed.add_field(name = "💸도박으로 날린 돈", value = loss, inline = False)
 
         await ctx.respond(embed=embed)
+
+@bot.slash_command(name = '랭킹', description = '누가누가 레벨이 높을까?')
+@commands.has_any_role(1004771045091323944, 1004685377682026516)
+async def 랭킹(ctx):
+    rank = ranking()
+    embed = discord.Embed(title = "🏆레벨 랭킹", description = "", color = 0x4A44FF)
+
+    for i in range(0,len(rank)):
+        if i%2 == 0:
+            name = rank[i]
+            lvl = rank[i+1]
+            embed.add_field(name = str(int(i/2+1))+"위 "+name, value ="🎟️레벨: "+str(lvl), inline=False)
+
+    await ctx.respond(embed=embed) 
+
+################<금융기능>################
 
 @bot.slash_command(name = '송금', description = '누구한테 돈을 보낼래?')
 @commands.has_any_role(1004771045091323944, 1004685377682026516)
@@ -363,25 +624,118 @@ async def 용돈(ctx):
     addMoney(row, int(rm))
     print("MONEY add Success")
 
+################<봇.이벤트>################
+
 @bot.event
 async def on_message(message):
-    if message.author == bot.user:
-        return
+    if message.author.bot:
+        return None
     else:
         userExistance, userRow = checkUser(message.author.name, message.author.id)
+        mcid = message.channel.id
+        
+        log_channel_id = discord.utils.get(bot.get_all_channels(), guild__name='세한 병원', name='⟦📑⟧৹₊채팅-기록실₊˚✦')
         channel = bot.get_channel(1005349277947670528)
-        if userExistance:
-            levelUp, lvl = levelupCheck(userRow)
-            if levelUp:
-                print(message.author, "가 레벨업 했습니다")
-                print("")
-                embed = discord.Embed(title = "🧪약물치료🧪", description = "", color = 0x00A260)
-                embed.set_footer(text = message.author.name + " 님이 약물치료 " + str(lvl) + "회를 받으셨습니다")
-                await channel.send(embed=embed)
+        log_channel = bot.get_channel(log_channel_id.id)
+        level, exp, money, loss, warn, caut = userInfo(userRow)
+        levelUp, lvl = levelupCheck(userRow)
+        user, row = checkUser(message.author.name, message.author.id)
+        if warn == 3:
+            await message.author.ban(reason = "경고 3회")
+        elif caut == 3:
+            modifyCaut(user, row, -int(3))
+            addWarn(row, int(1))
+        elif get(message.author.roles, id=1004771045091323944):
+            if userExistance:
+                if levelUp:
+                    if lvl >= 10:
+                        await message.author.remove_roles(discord.Object(1004739717461463070))
+                        print(message.author, "가 레벨업 했습니다")
+                        print("")
+                        embed = discord.Embed(title = "🧪약물치료🧪", description = "", color = 0x00A260)
+                        embed.set_footer(text = message.author.name + " 님이 약물치료 " + str(lvl) + "회를 받으셨습니다")
+                        await channel.send(embed=embed)
+                    else:
+                        print(message.author, "가 레벨업 했습니다")
+                        print("")
+                        embed = discord.Embed(title = "🧪약물치료🧪", description = "", color = 0x00A260)
+                        embed.set_footer(text = message.author.name + " 님이 약물치료 " + str(lvl) + "회를 받으셨습니다")
+                        await channel.send(embed=embed)
+                else:
+                    if lvl >= 10:
+                        await message.author.remove_roles(discord.Object(1004739717461463070))
+                        modifyExp(userRow, 1)
+                        addMoney(userRow, int(10))
+                        print("------------------------------\n")
+                    else:
+                        modifyExp(userRow, 1)
+                        addMoney(userRow, int(10))
+                        print("------------------------------\n")
+            if mcid == 1010895586276409414:
+                await log_channel.send(f'{message.author.mention}님이 {message.channel.mention}에서 채팅을 치셨습니다.')
+            elif mcid == 1004742567759466536:
+                await log_channel.send(f'{message.author.mention}님이 {message.channel.mention}에서 채팅을 치셨습니다.')
             else:
-                modifyExp(userRow, 1)
-                addMoney(userRow, int(10))
-                print("------------------------------\n")
+                return
+        elif get(message.author.roles, id=1041735448483086387):
+            if userExistance:
+                if levelUp:
+                    if lvl >= 10:
+                        await message.author.remove_roles(discord.Object(1004739717461463070))
+                        print(message.author, "가 레벨업 했습니다")
+                        print("")
+                        embed = discord.Embed(title = "🧪약물치료🧪", description = "", color = 0x00A260)
+                        embed.set_footer(text = message.author.name + " 님이 약물치료 " + str(lvl) + "회를 받으셨습니다")
+                        await channel.send(embed=embed)
+                    else:
+                        print(message.author, "가 레벨업 했습니다")
+                        print("")
+                        embed = discord.Embed(title = "🧪약물치료🧪", description = "", color = 0x00A260)
+                        embed.set_footer(text = message.author.name + " 님이 약물치료 " + str(lvl) + "회를 받으셨습니다")
+                        await channel.send(embed=embed)
+                else:
+                    if lvl >= 10:
+                        await message.author.remove_roles(discord.Object(1004739717461463070))
+                        modifyExp(userRow, 1)
+                        addMoney(userRow, int(10))
+                        print("------------------------------\n")
+                    else:
+                        modifyExp(userRow, 1)
+                        addMoney(userRow, int(10))
+                        print("------------------------------\n")
+            if mcid == 1010895586276409414:
+                await log_channel.send(f'{message.author.mention}님이 {message.channel.mention}에서 채팅을 치셨습니다.')
+            elif mcid == 1004742567759466536:
+                await log_channel.send(f'{message.author.mention}님이 {message.channel.mention}에서 채팅을 치셨습니다.')
+            else:
+                return
+        else:
+            if userExistance:
+                levelUp, lvl = levelupCheck(userRow)
+                if levelUp:
+                    if lvl >= 10:
+                        await message.author.remove_roles(discord.Object(1004739717461463070))
+                        print(message.author, "가 레벨업 했습니다")
+                        print("")
+                        embed = discord.Embed(title = "🧪약물치료🧪", description = "", color = 0x00A260)
+                        embed.set_footer(text = message.author.name + " 님이 약물치료 " + str(lvl) + "회를 받으셨습니다")
+                        await channel.send(embed=embed)
+                    else:
+                        print(message.author, "가 레벨업 했습니다")
+                        print("")
+                        embed = discord.Embed(title = "🧪약물치료🧪", description = "", color = 0x00A260)
+                        embed.set_footer(text = message.author.name + " 님이 약물치료 " + str(lvl) + "회를 받으셨습니다")
+                        await channel.send(embed=embed)
+                else:
+                    if lvl >= 10:
+                        await message.author.remove_roles(discord.Object(1004739717461463070))
+                        modifyExp(userRow, 1)
+                        addMoney(userRow, int(10))
+                        print("------------------------------\n")
+                    else:
+                        modifyExp(userRow, 1)
+                        addMoney(userRow, int(10))
+                        print("------------------------------\n")
 
 
 @bot.event
@@ -392,6 +746,9 @@ async def on_application_command_error(ctx, error):
         await ctx.respond("명령어를 사용하기에 권한이 부족합니다", ephemeral =True)    
     elif isinstance(error, commands.CommandOnCooldown):
         await ctx.respond(f"아직 명령어를 사용할 수 없습니다. {int(error.retry_after)}초 후에 다시 시도하세요", ephemeral =True)
+    elif isinstance(error, NameError):
+        channel = bot.get_channel(1008004079743672432)
+        await channel.respond('해당하는 채널을 찾지 못하였습니다.')
     else:
         raise error
         
@@ -467,7 +824,7 @@ async def 외과(ctx):
     
 ################<원무과>################
 @bot.slash_command(name = 'a', description = '환영멘트를 올려보자!')
-@commands.has_any_role(1004688586093887528, 1004688539914608640, 1004689605305585704, 998046067964776578)
+@commands.has_any_role(1004688586093887528, 1004688539914608640, 1004689605305585704, 998046067964776578, 1041734025468981319)
 async def a(ctx, 
 환자:Option(discord.User,'멘션할 환자를 태그해주세요'),
 환자1:Option(discord.User,'멘션할 환자를 태그해주세요', required=False),
@@ -490,15 +847,16 @@ async def a(ctx,
         await ctx.respond(f'성공적으로 {환자.mention}님을 멘션하여 환영멘트를 전송하였습니다 | 작성자 : {ctx.author.mention}')
 
 @bot.slash_command(name = 'b', description = '안내 기록을 남겨!')
-@commands.has_any_role(1004688586093887528, 1004688539914608640, 1004689605305585704, 998046067964776578)
+@commands.has_any_role(1004688586093887528, 1004688539914608640, 1004689605305585704, 998046067964776578, 1041734025468981319)
 async def b(ctx, 
 이름:Option(discord.User,'환자의 이름을 적어주세요!'),
 나이:Option(int,'나이를 적어주세요!(주민등록상의 세는나이 기준)', min_value=12),
 공개여부:Option(str,'공개여부를 선택해주세요!', choices=['공개','비공']),
 성별:Option(str,'성별을 선택해주세요!', choices=['남성','여성']),
-경로:Option(str,'저희 서버에는 어떻게 들어오시게 되었나요?', choices=['디스보드','디코올','디스니티','초대','연합링크']),
+경로:Option(str,'저희 서버에는 어떻게 들어오시게 되었나요?', choices=['디스보드','디코올','디스니티','초대','연합링크','서버병합']),
 초대자:Option(discord.User,'누가 초대하였나요?', required=False),
-서버명:Option(discord.TextChannel,'어느서버를 통해 오시게 되었나요?', required=False)):
+서버명:Option(discord.TextChannel,'어느서버를 통해 오시게 되었나요?', required=False),
+병합서버:Option(str,'서버 병합은 여기에 적어주세요!', choices=['힐링호텔'], required=False)):
     channel = bot.get_channel(1026861536020533349)
     if 경로 == '초대':
         await channel.send(f'{date_form} {이름.mention} {나이} {공개여부} {성별} {경로} {초대자.mention} | 안내자 : {ctx.author.mention}')
@@ -506,12 +864,15 @@ async def b(ctx,
     elif 경로 == '연합링크':
         await channel.send(f'{date_form} {이름.mention} {나이} {공개여부} {성별} {경로} {서버명.mention} | 안내자 : {ctx.author.mention}')
         await ctx.respond(f'성공적으로 기록하였습니다.', ephemeral =True)
+    elif 경로 == '서버병합':
+        await channel.send(f'{date_form} {이름.mention} {나이} {공개여부} {성별} {경로} {병합서버} | 안내자 : {ctx.author.mention}')
+        await ctx.respond(f'성공적으로 기록하였습니다.', ephemeral =True)
     else:
         await channel.send(f'{date_form} {이름.mention} {나이} {공개여부} {성별} {경로} | 안내자 : {ctx.author.mention}')
         await ctx.respond(f'성공적으로 기록하였습니다.', ephemeral =True)
 
 @bot.slash_command(name = 'c', description = '안내중 문제가 발생한다면?')
-@commands.has_any_role(1004688586093887528, 1004688539914608640, 1004689605305585704, 998046067964776578)
+@commands.has_any_role(1004688586093887528, 1004688539914608640, 1004689605305585704, 998046067964776578, 1041734025468981319)
 async def c(ctx):
     channel = bot.get_channel(1005089714266701925)
 
@@ -524,7 +885,7 @@ async def c(ctx):
 
 ################<간호사>################
 @bot.slash_command(name = 'f', description = '환영멘트를 올려보자!')
-@commands.has_any_role(1004688954089537667, 1004688539914608640, 1004689605305585704, 998046067964776578)
+@commands.has_any_role(1004688954089537667, 1004688539914608640, 1004689605305585704, 998046067964776578, 1041734022423924736)
 async def f(ctx, 
 환자:Option(discord.User,'멘션할 환자를 태그해주세요'),
 환자1:Option(discord.User,'멘션할 환자를 태그해주세요', required=False),
@@ -548,41 +909,93 @@ async def f(ctx,
 
 ################<보안팀>################
 @bot.slash_command(name = 'k', description = '환자에게 경고를 줘!')
-@commands.has_any_role(1004688567613784175, 1004688539914608640, 1004689605305585704, 998046067964776578)
+@commands.has_any_role(1004688567613784175, 1004688539914608640, 1004689605305585704, 998046067964776578, 1041733913837568050)
 async def k(ctx, 
 환자:Option(discord.User,'주의를 줄 환자를 태그해줘!'),
 종류:Option(str,'지급하려는 종류를 선택해줘!',choices=['주의','경고','차단']),
 횟수:Option(str,'경고 횟수를 선택해줘!',choices=['1','2','3'], required=False),
 사유:Option(str,'지급 하는 사유를 적어줘!', required=False),
 규칙번호:Option(str,'해당하는 규칙 번호를 적어줘! e.g.)1-1', required=False)):
+    user, row = checkUser(환자.name, 환자.id)
     if 종류 == '주의':
         channel = bot.get_channel(1004748420898103326)
         if 사유:
-            await channel.send(f'{환자.mention}||({환자.id})|| 주의 {횟수}회 지급되었습니다.\n사유 : {사유}')
-            await ctx.respond(f'성공적으로 {환자}에게 주의를 지급하였습니다', ephemeral =True)
+            if 횟수 == '1':
+                await channel.send(f'{환자.mention}||({환자.id})|| 주의 {횟수}회 지급되었습니다.\n사유 : {사유}')
+                await ctx.respond(f'성공적으로 {환자.mention}에게 주의를 지급하였습니다', ephemeral =True)
+                addCaut(row, int(횟수))
+                await 환자.add_roles(discord.Object(1005346540665176146))
+            elif 횟수 == '2':
+                await channel.send(f'{환자.mention}||({환자.id})|| 주의 {횟수}회 지급되었습니다.\n사유 : {사유}')
+                await ctx.respond(f'성공적으로 {환자.mention}에게 주의를 지급하였습니다', ephemeral =True)
+                addCaut(row, int(횟수))
+                await 환자.add_roles(discord.Object(1042063196460171274))
+            elif 횟수 == '3':
+                await ctx.respond('횟수가 정확하지 않습니다! 다시 입력해주세요! "주의 - 최대 2회"', ephemeral =True)
         else:
-            await channel.send(f'{환자.mention}||({환자.id})|| 주의 {횟수}회 지급되었습니다.\n사유 : <#1005092364118925383> {규칙번호} 을 참고해주세요!')
-            await ctx.respond(f'성공적으로 {환자}에게 주의를 지급하였습니다', ephemeral =True)
+            if 횟수 == '1':
+                await channel.send(f'{환자.mention}||({환자.id})|| 주의 {횟수}회 지급되었습니다.\n사유 : <#1005092364118925383> {규칙번호} 을 참고해주세요!')
+                await ctx.respond(f'성공적으로 {환자.mention}에게 주의를 지급하였습니다', ephemeral =True)
+                addCaut(row, int(횟수))
+                await 환자.add_roles(discord.Object(1005346540665176146))
+            elif 횟수 == '2':
+                await channel.send(f'{환자.mention}||({환자.id})|| 주의 {횟수}회 지급되었습니다.\n사유 : <#1005092364118925383> {규칙번호} 을 참고해주세요!')
+                await ctx.respond(f'성공적으로 {환자.mention}에게 주의를 지급하였습니다', ephemeral =True)
+                addCaut(row, int(횟수))
+                await 환자.add_roles(discord.Object(1042063196460171274))
+            elif 횟수 == '3':
+                await ctx.respond('횟수가 정확하지 않습니다! 다시 입력해주세요! "주의 - 최대 2회"', ephemeral =True)
     elif 종류 == '경고':
         channel = bot.get_channel(1004748420898103326)
         if 사유:
-            await channel.send(f'{환자.mention}||({환자.id})|| 경고 {횟수}회 지급되었습니다.\n사유 : {사유}')
-            await ctx.respond(f'성공적으로 {환자}에게 경고를 지급하였습니다', ephemeral =True)
+            if 횟수 == '1':
+                await channel.send(f'{환자.mention}||({환자.id})|| 경고 {횟수}회 지급되었습니다.\n사유 : {사유}')
+                await ctx.respond(f'성공적으로 {환자.mention}에게 경고를 지급하였습니다', ephemeral =True)
+                addWarn(row, int(횟수))
+                await 환자.add_roles(discord.Object(1005052050230480936))
+            elif 횟수 == '2':
+                await channel.send(f'{환자.mention}||({환자.id})|| 경고 {횟수}회 지급되었습니다.\n사유 : {사유}')
+                await ctx.respond(f'성공적으로 {환자.mention}에게 경고를 지급하였습니다', ephemeral =True)
+                addWarn(row, int(횟수))
+                await 환자.add_roles(discord.Object(1005052073806663702))
+            elif 횟수 == '3':
+                await channel.send(f'{환자.mention}||({환자.id})|| 경고 {횟수}회 지급되었습니다.\n사유 : {사유}')
+                await ctx.respond(f'성공적으로 {환자.mention}에게 경고를 지급하였습니다', ephemeral =True)
+                addWarn(row, int(횟수))
+                await 환자.add_roles(discord.Object(1005052088721617006))
         else:
-            await channel.send(f'{환자.mention}||({환자.id})|| 경고 {횟수}회 지급되었습니다.\n사유 : <#1005092364118925383> {규칙번호} 을 참고해주세요!')
-            await ctx.respond(f'성공적으로 {환자}에게 경고를 지급하였습니다', ephemeral =True)
+            if 횟수 == '1':
+                await channel.send(f'{환자.mention}||({환자.id})|| 경고 {횟수}회 지급되었습니다.\n사유 : <#1005092364118925383> {규칙번호} 을 참고해주세요!')
+                await ctx.respond(f'성공적으로 {환자.mention}에게 경고를 지급하였습니다', ephemeral =True)
+                addWarn(row, int(횟수))
+                await 환자.add_roles(discord.Object(1005052050230480936))
+            elif 횟수 == '2':
+                await channel.send(f'{환자.mention}||({환자.id})|| 경고 {횟수}회 지급되었습니다.\n사유 : <#1005092364118925383> {규칙번호} 을 참고해주세요!')
+                await ctx.respond(f'성공적으로 {환자.mention}에게 경고를 지급하였습니다', ephemeral =True)
+                addWarn(row, int(횟수))
+                await 환자.add_roles(discord.Object(1005052073806663702))
+            elif 횟수 == '3':
+                await channel.send(f'{환자.mention}||({환자.id})|| 경고 {횟수}회 지급되었습니다.\n사유 : <#1005092364118925383> {규칙번호} 을 참고해주세요!')
+                await ctx.respond(f'성공적으로 {환자.mention}에게 경고를 지급하였습니다', ephemeral =True)
+                addWarn(row, int(횟수))
+                await 환자.add_roles(discord.Object(1005052088721617006))
     elif 종류 == '차단':
         channel = bot.get_channel(1004748585629388913)
-        if 사유:
-            await channel.send(f'{환자.mention}||({환자.id})|| 차단되었습니다.\n사유 : {사유}')
-            await ctx.respond(f'성공적으로 {환자}를 차단하였습니다', ephemeral =True)
+        if 횟수:
+            await ctx.respond(f'삐빅! 차단은 횟수를 입력하실 수 없어요! 다시 작성해주세요!', ephemeral =True)
         else:
-            await channel.send(f'{환자.mention}||({환자.id})|| 차단되었습니다.\n사유 : <#1005092364118925383> {규칙번호} 을 참고해주세요!')
-            await ctx.respond(f'성공적으로 {환자}를 차단하였습니다', ephemeral =True)
+            if 사유:
+                await channel.send(f'{환자.mention}||({환자.id})|| 차단되었습니다.\n사유 : {사유}')
+                await ctx.respond(f'성공적으로 {환자}를 차단하였습니다', ephemeral =True)
+                await 환자.ban(reason = 사유)
+            else:
+                await channel.send(f'{환자.mention}||({환자.id})|| 차단되었습니다.\n사유 : <#1005092364118925383> {규칙번호} 을 참고해주세요!')
+                await ctx.respond(f'성공적으로 {환자}를 차단하였습니다', ephemeral =True)
+                await 환자.ban(reason = '세한병원 규칙 ' + 규칙번호 + '에 의거하여 차단')
 
 ################<정신과>################    
 @bot.slash_command(name = 'p', description = '상담 중 문제가 발생한다면?')
-@commands.has_any_role(1004688920694501406, 1004688539914608640, 1004689605305585704, 998046067964776578)
+@commands.has_any_role(1004688920694501406, 1004688539914608640, 1004689605305585704, 998046067964776578, 1041734019441762415)
 async def p(ctx):
     channel = bot.get_channel(1005089714266701925)
 
@@ -595,7 +1008,7 @@ async def p(ctx):
 
 ################<영상과>################
 @bot.slash_command(name = 'r', description = '담당자를 올려보자!')
-@commands.has_any_role(998527437237387334, 1004688539914608640, 1004689605305585704, 998046067964776578)
+@commands.has_any_role(998527437237387334, 1004688539914608640, 1004689605305585704, 998046067964776578, 1039163325994504232)
 async def r(ctx, 
 문의:Option(discord.User,'상대 서버의 담당장를 태그해!'),
 담당자:Option(discord.User,'우리 서버의 담당자를 태그해!')):
@@ -604,7 +1017,7 @@ async def r(ctx,
 
 ################<외과>################
 @bot.slash_command(name = 'u', description = '생일자를 올려보자!')
-@commands.has_any_role(1004688899475509279, 1004688539914608640, 1004689605305585704, 998046067964776578)
+@commands.has_any_role(1004688899475509279, 1004688539914608640, 1004689605305585704, 998046067964776578, 1035910158196420638)
 async def u(ctx, 
 생일자:Option(discord.User,'생일자를 태그해!'),
 하고싶은말:Option(str,'생일자에게 하고싶은말은 뭐야?')):
@@ -674,6 +1087,26 @@ async def 지급(ctx,
     addMoney(row, int(금액))
     print("MONEY add Success")
 
+@bot.slash_command(name = '경지', description = '테스팅 경고지급')
+@commands.has_any_role(998046067964776578)
+async def 경지(ctx, 
+대상자:Option(discord.User,'누구한테 지급하실 건가요?'),
+횟수:Option(int,'얼마를 지급하시겠습니까?',min_value=1)):
+    await ctx.respond(f'{대상자.mention}님에게 성공적으로 {횟수}만큼 지급하였습니다.', ephemeral =True)
+    user, row = checkUser(대상자.name, 대상자.id)
+    addWarn(row, int(횟수))
+    print("WARN add Success")
+
+@bot.slash_command(name = '주지', description = '테스팅 주의지급')
+@commands.has_any_role(998046067964776578)
+async def 주지(ctx, 
+대상자:Option(discord.User,'누구한테 지급하실 건가요?'),
+횟수:Option(int,'얼마를 지급하시겠습니까?',min_value=1)):
+    await ctx.respond(f'{대상자.mention}님에게 성공적으로 {횟수}만큼 지급하였습니다.', ephemeral =True)
+    user, row = checkUser(대상자.name, 대상자.id)
+    addCaut(row, int(횟수))
+    print("CAUT add Success")
+
 @bot.slash_command(name = '경험치', description = '누구한테 경험치를 줘볼까?')
 @commands.has_any_role(998046067964776578)
 async def 경험치(ctx, 
@@ -703,6 +1136,26 @@ async def 차감(ctx,
     user, row = checkUser(대상자.name, 대상자.id)
     modifyMoney(user, row, -int(금액))
     print("MONEY min Success")
+
+@bot.slash_command(name = '경감', description = '테스팅 경고 감소')
+@commands.has_any_role(998046067964776578)
+async def 경감(ctx, 
+대상자:Option(discord.User,'누구를 차감하실 건가요?'),
+횟수:Option(int,'얼마를 차감하시겠습니까?',min_value=1)):
+    await ctx.respond(f'{대상자.mention}님의 주의를 성공적으로 {횟수}회 차감하였습니다.', ephemeral =True)
+    user, row = checkUser(대상자.name, 대상자.id)
+    modifyWarn(user, row, -int(횟수))
+    print("Warn min Success")
+
+@bot.slash_command(name = '주감', description = '테스팅 주의 감소')
+@commands.has_any_role(998046067964776578)
+async def 주감(ctx, 
+대상자:Option(discord.User,'누구를 차감하실 건가요?'),
+횟수:Option(int,'얼마를 차감하시겠습니까?',min_value=1)):
+    await ctx.respond(f'{대상자.mention}님의 경고를 성공적으로 {횟수}회 차감하였습니다.', ephemeral =True)
+    user, row = checkUser(대상자.name, 대상자.id)
+    modifyCaut(user, row, -int(횟수))
+    print("Caut min Success")
      
 @bot.slash_command(name = '점검', description = '점검 시간을 알리는거야!')
 @commands.has_any_role(998046067964776578)
@@ -739,15 +1192,15 @@ async def 점검(ctx,
     await channel2.send('<@&1004739278720483418>')
     EX = await ctx.respond('성공적으로 전송되었습니다.', ephemeral = False)
     time.sleep(0.5)
-    await EX.edit_original_message(content = "백업을 시작합니다.")
+    await EX.edit_original_response(content = "백업을 시작합니다.")
     print('백업 실행중...')
     time.sleep(0.5)
     ATBU()
     time.sleep(0.5)
     print('백업 완료!')
-    await EX.edit_original_message(content = "백업이 완료 되었습니다!")
+    await EX.edit_original_response(content = "백업이 완료 되었습니다!")
     time.sleep(0.5)
-    await EX.edit_original_message(content = "안전종료 프로세스 가동")
+    await EX.edit_original_response(content = "안전종료 프로세스 가동")
     time.sleep(0.5)
     SE()
 
@@ -761,7 +1214,7 @@ async def 백업(ctx):
     time.sleep(0.5)
     print('백업 완료!') 
     time.sleep(0.5)
-    await rm.edit_original_message(content = "백업 완료!")
+    await rm.edit_original_response(content = "백업 완료!")
 
 class Info_Button(discord.ui.View):
     @discord.ui.button(label="봇 안내", style=discord.ButtonStyle.primary)
@@ -775,7 +1228,7 @@ class Info_Button(discord.ui.View):
         channel = bot.get_channel(1008004079743672432)
         rm = await interaction.response.send_message(f"원무과를 통하여 안내를 진행합니다! 잠시만 기다려주세요!", ephemeral =True)
         time.sleep(0.5)
-        await rm.edit_original_message(content = "원무과 호출중...")
+        await rm.edit_original_response(content = "원무과 호출중...")
         time.sleep(0.5)
         await channel.send(f'번호표가 발급되었습니다.\n\n<@&1004688586093887528>\n{interaction.user.mention}님의 안내를 도와주세요')
 
@@ -784,33 +1237,35 @@ class Exit_Button(discord.ui.View):
     async def exit(self, button: discord.ui.Button, interaction: discord.Interaction):
         rm = await interaction.response.send_message(f"재시동 프로세스 실행", ephemeral =True)
         time.sleep(0.5)
-        await rm.edit_original_message(content = "백업을 시작합니다.")
+        await rm.edit_original_response(content = "백업을 시작합니다.")
         print('백업 실행중...')
         time.sleep(0.5)
         shutil.copy('./userDB.xlsx', f'./BackUp/{dst_name}.xlsx')
+        time.sleep(0.5)
         shutil.copy('./SHbot.py', f'./BackUp/{dstpy_name}.py')
         time.sleep(0.5)
         print('백업 완료!')
-        await rm.edit_original_message(content = "백업이 완료되었습니다")
+        await rm.edit_original_response(content = "백업이 완료되었습니다")
         time.sleep(0.5)
-        await rm.edit_original_message(content = "안전종료 프로세스 가동중..")
-        time.sleep(0.5)
+        await rm.edit_original_response(content = "안전종료 프로세스 가동중..")
+        time.sleep(1)
         SE()
 
     @discord.ui.button(label="재시동", style=discord.ButtonStyle.primary)
     async def restart(self, button: discord.ui.Button, interaction: discord.Interaction):
         rm = await interaction.response.send_message(f"재시동 프로세스 실행", ephemeral =True)
         time.sleep(0.5)
-        await rm.edit_original_message(content = "백업을 시작합니다.")
+        await rm.edit_original_response(content = "백업을 시작합니다.")
         print('백업 실행중...')
         time.sleep(0.5)
         shutil.copy('./userDB.xlsx', f'./BackUp/{dst_name}.xlsx')
+        time.sleep(0.5)
         shutil.copy('./SHbot.py', f'./BackUp/{dstpy_name}.py')
         time.sleep(0.5)
         print('백업 완료!')
-        await rm.edit_original_message(content = "백업이 완료되었습니다")
+        await rm.edit_original_response(content = "백업이 완료되었습니다")
         time.sleep(0.5)
-        await rm.edit_original_message(content = f"시스템 재시동 상태로 진입합니다...")
+        await rm.edit_original_response(content = f"시스템 재시동 상태로 진입합니다...")
         print('시스템 재시동 상태로 진입합니다...')
         time.sleep(0.5)
         RS()
@@ -821,15 +1276,15 @@ class Exit_Button(discord.ui.View):
         print('백업 실행중...')
         time.sleep(0.5)
         shutil.copy('./userDB.xlsx', f'./BackUp/{dst_name}.xlsx')
+        time.sleep(0.5)
         shutil.copy('./SHbot.py', f'./BackUp/{dstpy_name}.py')
         time.sleep(0.5)
         print('백업 완료!') 
-        await rm.edit_original_message(content = '백업완료!')
+        await rm.edit_original_response(content = '백업완료!')
 
     @discord.ui.button(label="취소", style=discord.ButtonStyle.gray)
     async def cancel(self, button: discord.ui.Button, interaction: discord.Interaction):
         await interaction.response.send_message(f"시스템 종료를 취소합니다.", ephemeral =True)
-
 
 @bot.slash_command(name = '관리', description = '관리 옵션')
 @commands.has_any_role(998046067964776578)
@@ -854,7 +1309,7 @@ async def 테스트(ctx,
         await ctx.respond("재입장의 경우 안내 패스가 진행됩니다")
     else:
         if 나이 < 12:
-            await ctx.respond('저희 서버는 2022년 기준 11년생 12살 부터 입장 가능합니다.')
+            await ctx.respond('저희 서버는 2023년 기준 11년생 12살 부터 입장 가능합니다.')
         else:
             print("DB에서 ", ctx.author.name, "을 찾을 수 없습니다")
             print("")
@@ -884,7 +1339,7 @@ async def 테스트2(ctx,
         await ctx.respond("선택해주세요", view=Info_Button(timeout=15), ephemeral =True)
     else:
         if 나이 < 12:
-            await ctx.respond('저희 서버는 2022년 기준 11년생 12살 부터 입장 가능합니다.')
+            await ctx.respond('저희 서버는 2023년 기준 11년생 12살 부터 입장 가능합니다.')
         else:
             print("DB에서 ", ctx.author.name, "을 찾을 수 없습니다")
             print("")
@@ -895,14 +1350,13 @@ async def 테스트2(ctx,
             print("------------------------------\n")
             await channel.send(f'{ctx.author.mention}님의 입장 정보입니다\n\n닉네임 : {이름}\n나이 : {나이}\n비공 여부 : {비공여부}\n성별 : {성별}\n경로 : {경로}')
             await ctx.respond("선택해주세요", view=Info_Button(timeout=15), ephemeral =True)
-
+            
 def SE():
-    sys.exit("안전종료 프로세스 가동")
+    time.sleep(0.5)
+    os._exit(os.EX_OK)
 
 def RS():
-    os.execl(sys.executable, os.path.abspath(__file__), *sys.argv)
-
-bot.add_application_command(admin)
+    os.execl(sys.executable, sys.executable, *sys.argv)
 
 threading.Timer(43200, RS).start()
 
