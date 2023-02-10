@@ -31,6 +31,8 @@ date_form = time.strftime("%Y. %m. %d.")
 dst_name=date_format+'_UserDB_BackUp'
 dstpy_name=date_format+'_SHbot_BackUp'
 
+admin = SlashCommandGroup("admin", "Only Admin Commands")
+
 def ATBU():
     shutil.copy(os.getenv('DB_PT'), f'./BackUp/{dst_name}.xlsx')
     shutil.copy(os.getenv('PY_PT'), f'./BackUp/{dstpy_name}.py')
@@ -899,6 +901,8 @@ def SE():
 
 def RS():
     os.execl(sys.executable, os.path.abspath(__file__), *sys.argv)
+
+bot.add_application_command(admin)
 
 threading.Timer(43200, RS).start()
 
